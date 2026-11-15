@@ -11,13 +11,16 @@ import {
   ShieldCheck, 
   UserPlus, 
   Compass, 
-  Lock 
+  Lock,
+  Users
 } from 'lucide-react';
+import { PublicDirectory } from './components/PublicDirectory';
 import { SubmissionForm } from './components/SubmissionForm';
 import { SubmissionSuccess } from './components/SubmissionSuccess';
 import { EditProfile } from './components/EditProfile';
 import { AdminLogin } from './components/AdminLogin';
 import { AdminDashboard } from './components/AdminDashboard';
+import { AlumniProfile } from './components/AlumniProfileModal';
 
 interface HealthData {
   status: string;
@@ -41,7 +44,7 @@ interface HealthData {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'submit' | 'system' | 'edit' | 'admin'>('submit');
+  const [activeTab, setActiveTab] = useState<'directory' | 'submit' | 'system' | 'edit' | 'admin'>('directory');
   const [submittedData, setSubmittedData] = useState<{
     id: string;
     edit_token: string;
@@ -58,7 +61,7 @@ export default function App() {
   const [loadingHealth, setLoadingHealth] = useState(false);
   const [healthError, setHealthError] = useState<string | null>(null);
 
-  // Check admin session on initial load or when admin tab selected
+  // Check admin session
   const checkAdminAuth = async () => {
     setCheckingAuth(true);
     try {
@@ -76,12 +79,14 @@ export default function App() {
     }
   };
 
-  // URL route parsing (e.g. /admin, /edit/:token, /join)
+  // URL route parsing
   useEffect(() => {
     const path = window.location.pathname;
     if (path === '/admin') {
       setActiveTab('admin');
       checkAdminAuth();
+    } else if (path === '/join') {
+      setActiveTab('submit');
     } else if (path.startsWith('/edit/')) {
       const token = path.replace('/edit/', '').trim();
       if (token) {
@@ -91,9 +96,12 @@ export default function App() {
     } else {
       const params = new URLSearchParams(window.location.search);
       const tokenParam = params.get('token');
+      const cohortParam = params.get('cohort');
       if (tokenParam) {
         setEditToken(tokenParam);
         setActiveTab('edit');
+      } else if (cohortParam) {
+        setActiveTab('submit');
       }
     }
   }, []);
@@ -150,7 +158,7 @@ export default function App() {
       <header className="bg-white sticky top-0 z-40 shadow-xs">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div 
-            onClick={() => { setActiveTab('submit'); setSubmittedData(null); }}
+            onClick={() => { setActiveTab('directory'); setSubmittedData(null); }}
             className="flex items-center gap-3 cursor-pointer"
           >
             <img 
@@ -170,6 +178,20 @@ export default function App() {
           
           {/* Navigation Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Public Directory Tab (Module 4) */}
+            <button
+              onClick={() => { setActiveTab('directory'); setSubmittedData(null); }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                activeTab === 'directory' 
+                  ? 'bg-brand-teal text-white shadow-xs' 
+                  : 'bg-brand-cream text-brand-charcoal hover:bg-brand-teal-tint'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Directory</span>
+            </button>
+
+            {/* Submission Form Tab (Module 2) */}
             <button
               onClick={() => { setActiveTab('submit'); setSubmittedData(null); }}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
@@ -179,22 +201,10 @@ export default function App() {
               }`}
             >
               <UserPlus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Submission</span> Form
+              <span className="hidden sm:inline">Join</span> Directory
             </button>
 
-            <button
-              onClick={() => setActiveTab('system')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                activeTab === 'system' 
-                  ? 'bg-brand-teal text-white shadow-xs' 
-                  : 'bg-brand-cream text-brand-charcoal hover:bg-brand-teal-tint'
-              }`}
-            >
-              <Compass className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Foundations &</span> Specs
-            </button>
-
-            {/* Admin Dashboard Tab */}
+            {/* Admin Dashboard Tab (Module 3) */}
             <button
               onClick={handleAdminTabClick}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
@@ -209,6 +219,19 @@ export default function App() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
               )}
             </button>
+
+            {/* Architecture Tab */}
+            <button
+              onClick={() => setActiveTab('system')}
+              className={`p-1.5 rounded-xl transition-colors ${
+                activeTab === 'system' 
+                  ? 'bg-brand-teal text-white' 
+                  : 'text-gray-400 hover:text-brand-teal'
+              }`}
+              title="System Architecture & Tokens"
+            >
+              <Compass className="w-4 h-4" />
+            </button>
           </div>
         </div>
         {/* Thin Gold Line underneath directory header as required by Blueprint */}
@@ -218,7 +241,17 @@ export default function App() {
       {/* Main Container */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6">
         
-        {/* TAB 1: SUBMISSION FORM / SUCCESS VIEW (Module 2) */}
+        {/* TAB 1: PUBLIC DIRECTORY (Module 4) */}
+        {activeTab === 'directory' && (
+          <PublicDirectory
+            onOpenSubmissionForm={() => setActiveTab('submit')}
+            onOpenPortraitCard={(alum: AlumniProfile) => {
+              alert(`Portrait card for ${alum.first_name} ${alum.surname} will be generated in Module 5.`);
+            }}
+          />
+        )}
+
+        {/* TAB 2: SUBMISSION FORM / SUCCESS VIEW (Module 2) */}
         {activeTab === 'submit' && (
           <div>
             {!submittedData ? (
@@ -238,18 +271,18 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 2: EDIT PROFILE VIEW (Private Edit Link Flow) */}
+        {/* TAB 3: EDIT PROFILE VIEW (Private Edit Link Flow) */}
         {activeTab === 'edit' && editToken && (
           <EditProfile
             token={editToken}
             onBack={() => {
-              setActiveTab('submit');
+              setActiveTab('directory');
               setSubmittedData(null);
             }}
           />
         )}
 
-        {/* TAB 3: ADMIN PORTAL (Module 3) */}
+        {/* TAB 4: ADMIN PORTAL (Module 3) */}
         {activeTab === 'admin' && (
           <div>
             {checkingAuth ? (
@@ -265,7 +298,7 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 4: SYSTEM ARCHITECTURE & DESIGN TOKENS (Module 1 Foundation) */}
+        {/* TAB 5: SYSTEM ARCHITECTURE & DESIGN TOKENS (Module 1 Foundation) */}
         {activeTab === 'system' && (
           <div className="space-y-10">
             {/* Hero */}
