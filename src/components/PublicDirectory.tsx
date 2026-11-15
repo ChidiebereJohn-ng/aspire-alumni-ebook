@@ -45,6 +45,36 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
     fetchDirectory();
   }, [cohortFilter, industryFilter, stateFilter]);
 
+  // Log directory view once per user session
+  useEffect(() => {
+    try {
+      const hasLogged = sessionStorage.getItem('aspire_logged_dir_view');
+      if (!hasLogged) {
+        fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'directory_view' }),
+        }).catch(() => {});
+        sessionStorage.setItem('aspire_logged_dir_view', '1');
+      }
+    } catch {}
+  }, []);
+
+  const handleSelectProfile = (item: AlumniProfile) => {
+    setSelectedProfile(item);
+    try {
+      fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'profile_view',
+          cohort_year: item.cohort_year,
+          alumni_id: item.id,
+        }),
+      }).catch(() => {});
+    } catch {}
+  };
+
   const fetchDirectory = async () => {
     setLoading(true);
     try {
@@ -147,7 +177,7 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
       {featured.length > 0 && (
         <FeaturedAlumniStrip 
           featured={featured} 
-          onSelect={(item) => setSelectedProfile(item)} 
+          onSelect={(item) => handleSelectProfile(item)} 
         />
       )}
 
@@ -281,7 +311,7 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
           {filteredAlumni.map((item) => (
             <div
               key={item.id}
-              onClick={() => setSelectedProfile(item)}
+              onClick={() => handleSelectProfile(item)}
               className="bg-white rounded-2xl p-5 shadow-xs hover:shadow-md transition-all border border-brand-teal/10 hover:border-brand-teal/40 cursor-pointer flex flex-col items-center text-center justify-between h-[230px] group"
             >
               <div className="relative mt-1">

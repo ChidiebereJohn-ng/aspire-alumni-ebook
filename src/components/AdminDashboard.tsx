@@ -18,10 +18,13 @@ import {
   Calendar,
   X,
   Upload,
-  Download
+  Download,
+  BarChart2,
+  Layers
 } from 'lucide-react';
 import { EBookGeneratorModal } from './EBookGeneratorModal';
 import { CsvImportModal } from './CsvImportModal';
+import { AdminStatsView } from './AdminStatsView';
 import { NIGERIAN_STATES, INDUSTRIES, COHORTS } from '../constants/options';
 
 interface AdminDashboardProps {
@@ -77,6 +80,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [cohortCounts, setCohortCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [dashboardTab, setDashboardTab] = useState<'moderation' | 'stats'>('moderation');
 
   // Settings
   const [directoryPublic, setDirectoryPublic] = useState(true);
@@ -362,8 +366,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         </div>
       </div>
 
-      {/* Cohort Counts Bar (Blueprint Section 2: "Count of entries per cohort") */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-brand-teal/10">
+      {/* Primary Section Switcher: Moderation vs Analytics */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-brand-teal/15 pb-2">
+        <button
+          type="button"
+          onClick={() => setDashboardTab('moderation')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            dashboardTab === 'moderation'
+              ? 'bg-brand-teal text-white shadow-xs'
+              : 'bg-white text-brand-charcoal hover:bg-brand-cream border border-brand-teal/15'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>Directory Submissions & Moderation</span>
+          {(stats?.pending_count ?? 0) > 0 && (
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+              dashboardTab === 'moderation' ? 'bg-white text-brand-teal' : 'bg-amber-100 text-amber-800'
+            }`}>
+              {stats?.pending_count}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setDashboardTab('stats')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            dashboardTab === 'stats'
+              ? 'bg-brand-teal text-white shadow-xs'
+              : 'bg-white text-brand-charcoal hover:bg-brand-cream border border-brand-teal/15'
+          }`}
+        >
+          <BarChart2 className="w-4 h-4" />
+          <span>Foundation Analytics & Stats</span>
+        </button>
+      </div>
+
+      {dashboardTab === 'stats' ? (
+        <AdminStatsView />
+      ) : (
+        <>
+          {/* Cohort Counts Bar (Blueprint Section 2: "Count of entries per cohort") */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-brand-teal/10">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-bold uppercase tracking-wider text-brand-charcoal flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-brand-teal" />
@@ -886,8 +930,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           </div>
         </div>
       )}
+    </>
+  )}
 
-      {/* E-Book Generator Modal */}
+  {/* E-Book Generator Modal */}
       {isEBookModalOpen && (
         <EBookGeneratorModal
           alumni={items}

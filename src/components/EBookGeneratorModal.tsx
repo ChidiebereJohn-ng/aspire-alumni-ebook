@@ -73,6 +73,18 @@ export const EBookGeneratorModal: React.FC<EBookGeneratorModalProps> = ({
     const safeName = editionName.replace(/[^a-z0-9]/gi, '_');
     a.download = `Aspire_Alumni_Directory_${safeName}_${scope}.pdf`;
     a.click();
+
+    // Log ebook_download event (Blueprint Section 6.4)
+    try {
+      fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'ebook_download',
+          cohort_year: scope === 'all' ? null : parseInt(scope, 10),
+        }),
+      }).catch(() => {});
+    } catch {}
   };
 
   const fellowsCount = scope === 'all' 
