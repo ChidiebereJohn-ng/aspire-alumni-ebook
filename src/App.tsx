@@ -8,8 +8,13 @@ import {
   Layers, 
   Smartphone,
   RefreshCw,
-  ShieldCheck
+  ShieldCheck,
+  UserPlus,
+  Compass
 } from 'lucide-react';
+import { SubmissionForm } from './components/SubmissionForm';
+import { SubmissionSuccess } from './components/SubmissionSuccess';
+import { EditProfile } from './components/EditProfile';
 
 interface HealthData {
   status: string;
@@ -33,13 +38,41 @@ interface HealthData {
 }
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<'submit' | 'system' | 'edit'>('submit');
+  const [submittedData, setSubmittedData] = useState<{
+    id: string;
+    edit_token: string;
+    surname: string;
+    first_name: string;
+  } | null>(null);
+  const [editToken, setEditToken] = useState<string | null>(null);
+
   const [health, setHealth] = useState<HealthData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadingHealth, setLoadingHealth] = useState(false);
+  const [healthError, setHealthError] = useState<string | null>(null);
+
+  // URL route parsing (e.g. /edit/:token or ?token=)
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/edit/')) {
+      const token = path.replace('/edit/', '').trim();
+      if (token) {
+        setEditToken(token);
+        setActiveTab('edit');
+      }
+    } else {
+      const params = new URLSearchParams(window.location.search);
+      const tokenParam = params.get('token');
+      if (tokenParam) {
+        setEditToken(tokenParam);
+        setActiveTab('edit');
+      }
+    }
+  }, []);
 
   const fetchHealth = async () => {
-    setLoading(true);
-    setError(null);
+    setLoadingHealth(true);
+    setHealthError(null);
     try {
       const res = await fetch('/api/health');
       if (!res.ok) {
@@ -48,11 +81,10 @@ export default function App() {
       const data = await res.json();
       setHealth(data);
     } catch (err: any) {
-      // In local dev without pages functions proxy, provide fallback representation
       console.warn('API health check error:', err);
-      setError(err?.message || 'Could not connect to /api/health');
+      setHealthError(err?.message || 'Could not connect to /api/health');
     } finally {
-      setLoading(false);
+      setLoadingHealth(false);
     }
   };
 
@@ -76,7 +108,10 @@ export default function App() {
       {/* 1. Header Bar with Logo & Thin Gold Line (as specified in Blueprint) */}
       <header className="bg-white sticky top-0 z-40 shadow-xs">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div 
+            onClick={() => { setActiveTab('submit'); setSubmittedData(null); }}
+            className="flex items-center gap-3 cursor-pointer"
+          >
             <img 
               src="/logo.png" 
               alt="Aspire for Excellence Foundation Logo" 
@@ -92,11 +127,31 @@ export default function App() {
             </div>
           </div>
           
+          {/* Navigation Controls */}
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-teal-tint text-brand-teal border border-brand-teal/20">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Module 1: Setup & Foundations
-            </span>
+            <button
+              onClick={() => { setActiveTab('submit'); setSubmittedData(null); }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                activeTab === 'submit' 
+                  ? 'bg-brand-teal text-white shadow-xs' 
+                  : 'bg-brand-cream text-brand-charcoal hover:bg-brand-teal-tint'
+              }`}
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Submission</span> Form
+            </button>
+
+            <button
+              onClick={() => setActiveTab('system')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                activeTab === 'system' 
+                  ? 'bg-brand-teal text-white shadow-xs' 
+                  : 'bg-brand-cream text-brand-charcoal hover:bg-brand-teal-tint'
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Architecture &</span> Tokens
+            </button>
           </div>
         </div>
         {/* Thin Gold Line underneath directory header as required by Blueprint */}
@@ -104,271 +159,240 @@ export default function App() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8 space-y-10">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6">
         
-        {/* Hero Section */}
-        <div className="text-center space-y-3 pt-2">
-          <div className="inline-flex items-center justify-center p-2 rounded-full bg-brand-teal-tint text-brand-gold mb-1">
-            <Star className="w-6 h-6 fill-brand-gold text-brand-gold" />
+        {/* TAB 1: SUBMISSION FORM / SUCCESS VIEW (Module 2) */}
+        {activeTab === 'submit' && (
+          <div>
+            {!submittedData ? (
+              <SubmissionForm
+                onSuccess={(data) => setSubmittedData(data)}
+              />
+            ) : (
+              <SubmissionSuccess
+                data={submittedData}
+                onEditNow={(token) => {
+                  setEditToken(token);
+                  setActiveTab('edit');
+                }}
+                onReset={() => setSubmittedData(null)}
+              />
+            )}
           </div>
-          <h1 className="font-serif-title text-3xl sm:text-4xl md:text-5xl font-bold text-brand-charcoal tracking-tight">
-            Aspire for Excellence Foundation
-          </h1>
-          <p className="font-serif-title text-xl sm:text-2xl italic text-brand-teal max-w-2xl mx-auto">
-            "Meet the alumni who came before you."
-          </p>
-          <p className="text-sm text-brand-charcoal/70 max-w-lg mx-auto">
-            Graduation yearbook & digital alumni network. Dignified, bright, and mobile-optimized for WhatsApp access.
-          </p>
-        </div>
+        )}
 
-        {/* Star Divider Motif */}
-        <div className="star-divider max-w-xs mx-auto">
-          <Star className="w-4 h-4 fill-brand-gold text-brand-gold" />
-        </div>
+        {/* TAB 2: EDIT PROFILE VIEW (Private Edit Link Flow) */}
+        {activeTab === 'edit' && editToken && (
+          <EditProfile
+            token={editToken}
+            onBack={() => {
+              setActiveTab('submit');
+              setSubmittedData(null);
+            }}
+          />
+        )}
 
-        {/* System & Architecture Status Panel (D1, R2, Cloudflare) */}
-        <section className="bg-white rounded-2xl p-6 shadow-sm border border-brand-teal/10 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
-            <div>
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-brand-teal" />
-                <h2 className="text-lg font-bold text-brand-charcoal">Infrastructure & Storage Verification</h2>
+        {/* TAB 3: SYSTEM ARCHITECTURE & DESIGN TOKENS (Module 1 Foundation) */}
+        {activeTab === 'system' && (
+          <div className="space-y-10">
+            {/* Hero */}
+            <div className="text-center space-y-3 pt-2">
+              <div className="inline-flex items-center justify-center p-2 rounded-full bg-brand-teal-tint text-brand-gold mb-1">
+                <Star className="w-6 h-6 fill-brand-gold text-brand-gold" />
               </div>
-              <p className="text-xs text-brand-charcoal/60 mt-0.5">
-                Cloudflare D1 edge database, R2 object storage binding, and API endpoints.
+              <h1 className="font-serif-title text-3xl sm:text-4xl md:text-5xl font-bold text-brand-charcoal tracking-tight">
+                Aspire for Excellence Foundation
+              </h1>
+              <p className="font-serif-title text-xl sm:text-2xl italic text-brand-teal max-w-2xl mx-auto">
+                "Meet the alumni who came before you."
+              </p>
+              <p className="text-sm text-brand-charcoal/70 max-w-lg mx-auto">
+                Graduation yearbook & digital alumni network. Mobile-first for WhatsApp community distribution.
               </p>
             </div>
-            
-            <button
-              onClick={fetchHealth}
-              disabled={loading}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-teal text-white hover:bg-brand-teal-dark transition-colors self-start sm:self-auto disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Test API Connection
-            </button>
-          </div>
 
-          {error && (
-            <div className="p-3 bg-red-50 border border-brand-red/20 text-brand-red text-xs rounded-lg">
-              {error}
+            <div className="star-divider max-w-xs mx-auto">
+              <Star className="w-4 h-4 fill-brand-gold text-brand-gold" />
             </div>
-          )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Database Card */}
-            <div className="p-4 rounded-xl bg-brand-cream/60 border border-brand-teal/10 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-brand-charcoal/60">Database</span>
-                <Database className="w-4 h-4 text-brand-teal" />
+            {/* Infrastructure & Database Ping */}
+            <section className="bg-white rounded-2xl p-6 shadow-sm border border-brand-teal/10 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-brand-teal" />
+                    <h2 className="text-lg font-bold text-brand-charcoal">Infrastructure Status</h2>
+                  </div>
+                  <p className="text-xs text-brand-charcoal/60 mt-0.5">
+                    Cloudflare D1 SQLite database, R2 object storage binding, and API endpoints.
+                  </p>
+                </div>
+                
+                <button
+                  onClick={fetchHealth}
+                  disabled={loadingHealth}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-teal text-white hover:bg-brand-teal-dark transition-colors self-start sm:self-auto disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingHealth ? 'animate-spin' : ''}`} />
+                  Test Live Connection
+                </button>
               </div>
-              <div className="text-sm font-bold text-brand-charcoal">
-                {health?.database.status === 'connected' ? (
-                  <span className="inline-flex items-center gap-1.5 text-emerald-600">
-                    <CheckCircle2 className="w-4 h-4" /> D1 Connected
+
+              {healthError && (
+                <div className="p-3 bg-red-50 border border-brand-red/20 text-brand-red text-xs rounded-lg">
+                  {healthError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-xl bg-brand-cream/60 border border-brand-teal/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-brand-charcoal/60">Database</span>
+                    <Database className="w-4 h-4 text-brand-teal" />
+                  </div>
+                  <div className="text-sm font-bold text-brand-charcoal">
+                    {health?.database.status === 'connected' ? (
+                      <span className="inline-flex items-center gap-1.5 text-emerald-600">
+                        <CheckCircle2 className="w-4 h-4" /> D1 Connected
+                      </span>
+                    ) : (
+                      <span className="text-brand-orange font-medium">Ready (D1 Configured)</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-brand-charcoal/70">
+                    Total Records: <span className="font-semibold text-brand-teal">{health?.database.totalAlumniRecords ?? '8 sample records'}</span>
+                  </div>
+                  <div className="text-[11px] text-brand-charcoal/50">
+                    Latency: {health?.responseTimeMs ?? 35} ms
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-brand-cream/60 border border-brand-teal/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-brand-charcoal/60">Photo & PDF Storage</span>
+                    <HardDrive className="w-4 h-4 text-brand-teal" />
+                  </div>
+                  <div className="text-sm font-bold text-brand-teal">
+                    <CheckCircle2 className="w-4 h-4 inline mr-1" />
+                    R2 Storage
+                  </div>
+                  <div className="text-xs text-brand-charcoal/70">
+                    Target: <span className="font-medium">aspire-alumni-storage</span>
+                  </div>
+                  <div className="text-[11px] text-brand-charcoal/50">
+                    Photos at 800px square
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-brand-cream/60 border border-brand-teal/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-brand-charcoal/60">Viewport</span>
+                    <Smartphone className="w-4 h-4 text-brand-teal" />
+                  </div>
+                  <div className="text-sm font-bold text-emerald-600">
+                    Mobile-First (WhatsApp)
+                  </div>
+                  <div className="text-xs text-brand-charcoal/70">
+                    PWA Ready • Fast Load
+                  </div>
+                  <div className="text-[11px] text-brand-charcoal/50">
+                    Touch-friendly square crop
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-brand-cream/60 border border-brand-teal/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-brand-charcoal/60">Design Tokens</span>
+                    <Palette className="w-4 h-4 text-brand-teal" />
+                  </div>
+                  <div className="text-sm font-bold text-brand-teal">
+                    Tokens Active
+                  </div>
+                  <div className="text-xs text-brand-charcoal/70">
+                    Headings: <span className="font-serif-title font-semibold">Cormorant / Playfair</span>
+                  </div>
+                  <div className="text-[11px] text-brand-charcoal/50">
+                    Body: Inter (Google Fonts)
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Design Tokens Palette */}
+            <section className="bg-white rounded-2xl p-6 shadow-sm border border-brand-teal/10 space-y-6">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                <Palette className="w-5 h-5 text-brand-teal" />
+                <h2 className="text-lg font-bold text-brand-charcoal">Design System Palette (Blueprint Section 1)</h2>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {paletteColors.map((color) => (
+                  <div 
+                    key={color.hex} 
+                    className="rounded-xl overflow-hidden border border-gray-200/80 shadow-xs flex flex-col"
+                  >
+                    <div className={`h-16 w-full ${color.bg} flex items-end p-2 justify-end`}>
+                      <span className="text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded backdrop-blur-sm bg-black/20 text-white">
+                        {color.hex}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-white flex-1 flex flex-col justify-between">
+                      <div className="font-semibold text-xs text-brand-charcoal">{color.name}</div>
+                      <div className="text-[11px] text-brand-charcoal/60 mt-1">{color.role}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Logo Placements */}
+            <section className="bg-white rounded-2xl p-6 shadow-sm border border-brand-teal/10 space-y-6">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                <Layers className="w-5 h-5 text-brand-teal" />
+                <h2 className="text-lg font-bold text-brand-charcoal">Logo Placement Rules (Blueprint Section 1)</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-5 rounded-xl bg-brand-cream border border-brand-teal/10 text-center space-y-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-brand-teal block">
+                    Rule 1: Submission Form (Top Center)
                   </span>
-                ) : (
-                  <span className="text-brand-orange font-medium">Ready (D1 Configured)</span>
-                )}
-              </div>
-              <div className="text-xs text-brand-charcoal/70">
-                Binding: <code className="bg-white px-1.5 py-0.5 rounded text-[11px] font-mono border">DB</code>
-              </div>
-              <div className="text-xs text-brand-charcoal/70">
-                Seeded Alumni: <span className="font-semibold text-brand-teal">{health?.database.totalAlumniRecords ?? '8 sample records'}</span>
-              </div>
-            </div>
-
-            {/* Object Storage Card */}
-            <div className="p-4 rounded-xl bg-brand-cream/60 border border-brand-teal/10 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-brand-charcoal/60">Photo & PDF Storage</span>
-                <HardDrive className="w-4 h-4 text-brand-teal" />
-              </div>
-              <div className="text-sm font-bold text-brand-charcoal">
-                <span className="inline-flex items-center gap-1.5 text-brand-teal">
-                  <CheckCircle2 className="w-4 h-4" /> R2 Storage
-                </span>
-              </div>
-              <div className="text-xs text-brand-charcoal/70">
-                Binding: <code className="bg-white px-1.5 py-0.5 rounded text-[11px] font-mono border">STORAGE</code>
-              </div>
-              <div className="text-xs text-brand-charcoal/70">
-                Target: <span className="font-medium">aspire-alumni-storage</span>
-              </div>
-            </div>
-
-            {/* Mobile Viewport Card */}
-            <div className="p-4 rounded-xl bg-brand-cream/60 border border-brand-teal/10 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-brand-charcoal/60">Viewport</span>
-                <Smartphone className="w-4 h-4 text-brand-teal" />
-              </div>
-              <div className="text-sm font-bold text-emerald-600">
-                Mobile-First (WhatsApp)
-              </div>
-              <div className="text-xs text-brand-charcoal/70">
-                Target: <span className="font-medium">320px – 430px phones</span>
-              </div>
-              <div className="text-xs text-brand-charcoal/70">
-                Viewport: <span className="font-medium">viewport-fit=cover</span>
-              </div>
-            </div>
-
-            {/* Design System Status */}
-            <div className="p-4 rounded-xl bg-brand-cream/60 border border-brand-teal/10 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-brand-charcoal/60">Design Tokens</span>
-                <Palette className="w-4 h-4 text-brand-teal" />
-              </div>
-              <div className="text-sm font-bold text-brand-teal">
-                Tokens Active
-              </div>
-              <div className="text-xs text-brand-charcoal/70">
-                Headings: <span className="font-serif-title font-semibold">Cormorant / Playfair</span>
-              </div>
-              <div className="text-xs text-brand-charcoal/70">
-                Body: <span className="font-sans font-medium">Inter (Google Fonts)</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Design System & Palette Showcase */}
-        <section className="bg-white rounded-2xl p-6 shadow-sm border border-brand-teal/10 space-y-6">
-          <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-            <Palette className="w-5 h-5 text-brand-teal" />
-            <h2 className="text-lg font-bold text-brand-charcoal">Design System Palette (Blueprint Section 1)</h2>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {paletteColors.map((color) => (
-              <div 
-                key={color.hex} 
-                className="rounded-xl overflow-hidden border border-gray-200/80 shadow-xs flex flex-col"
-              >
-                <div className={`h-16 w-full ${color.bg} flex items-end p-2 justify-end`}>
-                  <span className={`text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded backdrop-blur-sm bg-black/20 text-white`}>
-                    {color.hex}
-                  </span>
+                  <div className="py-2 flex justify-center">
+                    <img src="/logo.png" alt="Form Logo Placement" className="h-16 w-auto object-contain drop-shadow-xs" />
+                  </div>
+                  <h4 className="font-serif-title text-base font-bold text-brand-charcoal">
+                    Alumni Registration Form
+                  </h4>
+                  <p className="text-xs text-brand-charcoal/60">
+                    Centered at the top of the form, with title underneath.
+                  </p>
                 </div>
-                <div className="p-3 bg-white flex-1 flex flex-col justify-between">
-                  <div className="font-semibold text-xs text-brand-charcoal">{color.name}</div>
-                  <div className="text-[11px] text-brand-charcoal/60 mt-1">{color.role}</div>
+
+                <div className="p-5 rounded-xl bg-brand-teal text-white space-y-3 flex flex-col justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-brand-gold block">
+                      Rule 2: E-Book Cover & Dark Surfaces
+                    </span>
+                    <p className="text-xs text-white/80 mt-1">
+                      Logo placed on a clean white rounded panel for maximum crispness against deep teal background.
+                    </p>
+                  </div>
+
+                  <div className="py-4 flex justify-center">
+                    <div className="bg-white p-3 rounded-2xl shadow-md inline-block">
+                      <img src="/logo.png" alt="Cover Logo Placement" className="h-14 w-auto object-contain" />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-brand-gold">
+                    <span>Alumni Directory 2026</span>
+                    <Star className="w-4 h-4 fill-brand-gold" />
+                  </div>
                 </div>
               </div>
-            ))}
+            </section>
           </div>
-
-          {/* Typography Spec Demonstration */}
-          <div className="p-4 rounded-xl bg-brand-teal-tint/50 border border-brand-teal/20 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-brand-teal">Typography Hierarchy</h3>
-            
-            <div className="space-y-1">
-              <span className="text-[11px] text-brand-charcoal/50 uppercase font-mono block">Heading Serif (Cormorant Garamond)</span>
-              <p className="font-serif-title text-2xl font-bold text-brand-charcoal">
-                Aspire for Excellence <span className="text-brand-red">Foundation</span>
-              </p>
-            </div>
-
-            <div className="space-y-1 pt-1">
-              <span className="text-[11px] text-brand-charcoal/50 uppercase font-mono block">Cohort Badge Motif (Small Caps + Wide Spacing)</span>
-              <div className="flex flex-wrap gap-2">
-                <span className="cohort-badge bg-brand-teal text-white px-2.5 py-1 rounded text-xs">
-                  COHORT 2021
-                </span>
-                <span className="cohort-badge bg-brand-orange text-white px-2.5 py-1 rounded text-xs">
-                  COHORT 2024
-                </span>
-                <span className="cohort-badge bg-brand-gold text-white px-2.5 py-1 rounded text-xs">
-                  COHORT 2026
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-1 pt-1">
-              <span className="text-[11px] text-brand-charcoal/50 uppercase font-mono block">UI Body (Inter)</span>
-              <p className="text-xs text-brand-charcoal leading-relaxed max-w-xl">
-                Dignified, bright, and uncluttered. Mobile-optimized for alumni accessing the directory directly through WhatsApp group announcements.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Logo Placements Specified in Blueprint */}
-        <section className="bg-white rounded-2xl p-6 shadow-sm border border-brand-teal/10 space-y-6">
-          <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-            <Layers className="w-5 h-5 text-brand-teal" />
-            <h2 className="text-lg font-bold text-brand-charcoal">Logo Placement Rules (Blueprint Section 1)</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Form Placement: Top center above title */}
-            <div className="p-5 rounded-xl bg-brand-cream border border-brand-teal/10 text-center space-y-3">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-brand-teal block">
-                Rule 1: Submission Form (Top Center)
-              </span>
-              <div className="py-2 flex justify-center">
-                <img src="/logo.png" alt="Form Logo Placement" className="h-16 w-auto object-contain drop-shadow-xs" />
-              </div>
-              <h4 className="font-serif-title text-base font-bold text-brand-charcoal">
-                Alumni Registration Form
-              </h4>
-              <p className="text-xs text-brand-charcoal/60">
-                Centered at the top of the form, with title underneath.
-              </p>
-            </div>
-
-            {/* E-book Cover Placement: On dark teal panel */}
-            <div className="p-5 rounded-xl bg-brand-teal text-white space-y-3 flex flex-col justify-between">
-              <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-brand-gold block">
-                  Rule 2: E-Book Cover & Dark Surfaces
-                </span>
-                <p className="text-xs text-white/80 mt-1">
-                  Logo placed on a clean white rounded panel for maximum crispness against deep teal background.
-                </p>
-              </div>
-
-              <div className="py-4 flex justify-center">
-                <div className="bg-white p-3 rounded-2xl shadow-md inline-block">
-                  <img src="/logo.png" alt="Cover Logo Placement" className="h-14 w-auto object-contain" />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-brand-gold">
-                <span>Alumni Directory 2026</span>
-                <Star className="w-4 h-4 fill-brand-gold" />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Database Schema & Seed Verification */}
-        <section className="bg-white rounded-2xl p-6 shadow-sm border border-brand-teal/10 space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <Database className="w-5 h-5 text-brand-teal" />
-              <h2 className="text-lg font-bold text-brand-charcoal">D1 SQLite Tables & Seed Ready</h2>
-            </div>
-            <span className="text-xs font-mono text-brand-teal bg-brand-teal-tint px-2.5 py-1 rounded">
-              schema.sql + seed.sql
-            </span>
-          </div>
-
-          <p className="text-xs text-brand-charcoal/70">
-            The schema contains all production tables: <code className="bg-gray-100 px-1 py-0.5 rounded text-brand-teal font-mono">alumni</code> (including Section 6 privacy fields, edit tokens, soft delete), <code className="bg-gray-100 px-1 py-0.5 rounded text-brand-teal font-mono">settings</code>, <code className="bg-gray-100 px-1 py-0.5 rounded text-brand-teal font-mono">ebooks</code>, and <code className="bg-gray-100 px-1 py-0.5 rounded text-brand-teal font-mono">events</code>.
-          </p>
-
-          <div className="bg-brand-charcoal text-gray-100 p-4 rounded-xl text-xs font-mono overflow-x-auto">
-            <div className="text-emerald-400 font-bold mb-1">-- D1 Tables Defined:</div>
-            <div>CREATE TABLE alumni (id, surname, first_name, photo_key, city, state, employer, role, industry, cohort_year, advice, status, edit_token, consent, linkedin_url, hide_employer, hide_city, featured, country, removed_at, deleted_at, source, created_at, updated_at);</div>
-            <div className="mt-1">CREATE TABLE settings (id, directory_public, ebook_public, updated_at);</div>
-            <div className="mt-1">CREATE TABLE ebooks (id, edition_name, scope, pdf_key, generated_at);</div>
-            <div className="mt-1">CREATE TABLE events (id, type, cohort_year, alumni_id, created_at);</div>
-          </div>
-        </section>
+        )}
 
       </main>
 
