@@ -16,9 +16,12 @@ import {
   Briefcase,
   MapPin,
   Calendar,
-  X
+  X,
+  Upload,
+  Download
 } from 'lucide-react';
 import { EBookGeneratorModal } from './EBookGeneratorModal';
+import { CsvImportModal } from './CsvImportModal';
 import { NIGERIAN_STATES, INDUSTRIES, COHORTS } from '../constants/options';
 
 interface AdminDashboardProps {
@@ -51,6 +54,9 @@ interface AlumniItem {
   created_at: string;
   is_duplicate?: boolean;
   duplicate_matched_id?: string | null;
+  is_possible_duplicate?: boolean;
+  duplicate_possible_reason?: string | null;
+  duplicate_possible_id?: string | null;
 }
 
 interface DashboardStats {
@@ -82,6 +88,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [editFields, setEditFields] = useState<any>({});
   const [savingEdit, setSavingEdit] = useState(false);
   const [isEBookModalOpen, setIsEBookModalOpen] = useState(false);
+  const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
+
+  const handleExportCsv = () => {
+    const params = new URLSearchParams();
+    if (cohortFilter !== 'all') params.set('cohort', cohortFilter);
+    if (view !== 'all') params.set('status', view);
+    window.location.href = `/api/admin/csv-export?${params.toString()}`;
+  };
 
   // Message notifications
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -244,7 +258,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setIsCsvImportOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-brand-cream hover:bg-brand-teal-tint text-brand-charcoal transition-colors border border-brand-teal/20"
+              title="Bulk import past cohorts (2021-2025)"
+            >
+              <Upload className="w-3.5 h-3.5 text-brand-teal" />
+              Import CSV
+            </button>
+            <button
+              onClick={handleExportCsv}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-brand-cream hover:bg-brand-teal-tint text-brand-charcoal transition-colors border border-brand-teal/20"
+              title="Download CSV export of records"
+            >
+              <Download className="w-3.5 h-3.5 text-brand-teal" />
+              Export CSV
+            </button>
             <button
               onClick={() => fetchAlumni()}
               disabled={loading}
@@ -531,9 +561,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 <div className="space-y-3">
                   {/* Duplicate Alert Banner (Section 6.2) */}
                   {item.is_duplicate && (
-                    <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900 flex items-center gap-1.5 font-semibold">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                      <span>Possible Duplicate (Name & Cohort Match)</span>
+                    <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-[11px] text-rose-900 flex items-center justify-between font-semibold">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        <span>Exact Duplicate (Name & Cohort Match)</span>
+                      </div>
+                      {item.duplicate_matched_id && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery(item.surname)}
+                          className="underline text-[10px] text-rose-700 hover:text-rose-900 shrink-0 ml-1"
+                        >
+                          Find Match
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {item.is_possible_duplicate && (
+                    <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900 flex items-center justify-between font-semibold">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>Possible Match: {item.duplicate_possible_reason}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery(item.surname)}
+                        className="underline text-[10px] text-amber-700 hover:text-amber-900 shrink-0 ml-1"
+                      >
+                        Find Match
+                      </button>
                     </div>
                   )}
 
@@ -563,10 +620,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         </button>
                       </div>
 
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         <span className="cohort-badge text-[10px] bg-brand-teal text-white px-2 py-0.5 rounded">
                           Cohort {item.cohort_year}
                         </span>
+                        {item.source === 'import' && (
+                          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold border border-blue-200">
+                            CSV Import
+                          </span>
+                        )}
                         <span className="text-[11px] text-brand-charcoal/60 truncate">
                           {item.industry}
                         </span>
@@ -833,6 +895,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           onClose={() => setIsEBookModalOpen(false)}
         />
       )}
+
+      {/* CSV Import Modal (Blueprint Section 6.1 & 6.2) */}
+      <CsvImportModal
+        isOpen={isCsvImportOpen}
+        onClose={() => setIsCsvImportOpen(false)}
+        onImportComplete={() => {
+          setIsCsvImportOpen(false);
+          fetchAlumni();
+          showFeedback('success', 'Bulk CSV import processed successfully.');
+        }}
+      />
     </div>
   );
 };

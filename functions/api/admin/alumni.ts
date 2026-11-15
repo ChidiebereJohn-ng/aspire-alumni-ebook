@@ -79,23 +79,42 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     // 4. Duplicate Check Logic (Blueprint Section 6.2):
     // "A duplicate is the same surname, first name, and cohort, ignoring capitalization and extra spaces.
     // Form submissions that match an existing entry are flagged in the pending queue with a link to the original."
-    const nameMap: Record<string, string> = {};
-    const items = records.results.map((item) => {
-      const cleanKey = `${item.surname.trim().toLowerCase()}_${item.first_name.trim().toLowerCase()}_${item.cohort_year}`;
-      let isDuplicate = false;
-      let duplicateMatchedId: string | null = null;
+    const allActive = await env.DB.prepare(
+      `SELECT id, surname, first_name, cohort_year FROM alumni WHERE deleted_at IS NULL`
+    ).all<{ id: string; surname: string; first_name: string; cohort_year: number }>();
 
-      if (nameMap[cleanKey] && nameMap[cleanKey] !== item.id) {
-        isDuplicate = true;
-        duplicateMatchedId = nameMap[cleanKey];
-      } else {
-        nameMap[cleanKey] = item.id;
-      }
+    const activeList = allActive.results || [];
+
+    const items = records.results.map((item) => {
+      const cleanSurname = item.surname.trim().toLowerCase();
+      const cleanFirst = item.first_name.trim().toLowerCase();
+
+      // Find another active record with exact same surname, first name, and cohort
+      const exactMatch = activeList.find(
+        (ex) =>
+          ex.id !== item.id &&
+          ex.surname.trim().toLowerCase() === cleanSurname &&
+          ex.first_name.trim().toLowerCase() === cleanFirst &&
+          ex.cohort_year === item.cohort_year
+      );
+
+      // Find another active record with same surname, first name in a different cohort
+      const diffCohortMatch = !exactMatch
+        ? activeList.find(
+            (ex) =>
+              ex.id !== item.id &&
+              ex.surname.trim().toLowerCase() === cleanSurname &&
+              ex.first_name.trim().toLowerCase() === cleanFirst
+          )
+        : null;
 
       return {
         ...item,
-        is_duplicate: isDuplicate,
-        duplicate_matched_id: duplicateMatchedId,
+        is_duplicate: !!exactMatch,
+        duplicate_matched_id: exactMatch ? exactMatch.id : null,
+        is_possible_duplicate: !exactMatch && !!diffCohortMatch,
+        duplicate_possible_reason: diffCohortMatch ? `Same name in Cohort ${diffCohortMatch.cohort_year}` : null,
+        duplicate_possible_id: diffCohortMatch ? diffCohortMatch.id : null,
       };
     });
 
