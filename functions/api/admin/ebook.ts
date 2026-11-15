@@ -67,3 +67,40 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     });
   }
 };
+
+export const onRequestDelete: PagesFunction<Env> = async (context) => {
+  const { request, env } = context;
+  const cookieHeader = request.headers.get('Cookie');
+  const sessionSecret = env.ADMIN_SESSION_SECRET || DEFAULT_SESSION_SECRET;
+
+  const isValid = await verifyAdminSession(cookieHeader, sessionSecret);
+  if (!isValid) {
+    return new Response(JSON.stringify({ success: false, error: 'Unauthorized.' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    if (!id) {
+      return new Response(JSON.stringify({ success: false, error: 'Edition ID is required.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    await env.DB.prepare('DELETE FROM ebooks WHERE id = ?').bind(id).run();
+
+    return new Response(JSON.stringify({ success: true, message: 'Edition removed from archive.' }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ success: false, error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
+
