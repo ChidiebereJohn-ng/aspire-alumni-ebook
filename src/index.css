@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Design Tokens from Blueprint Section 1 */
+  --color-primary: #148D93;       /* Logo teal */
+  --color-primary-dark: #0E6B70;  /* Dark teal */
+  --color-accent: #F7822D;        /* Star orange */
+  --color-gold: #F5A623;          /* Warm gold */
+  --color-red: #D63A3F;           /* Logo red */
+  --color-text: #1F2A30;          /* Deep charcoal */
+  --color-bg: #FBF8F4;            /* Warm off-white */
+  --color-card: #FFFFFF;          /* Card white */
+  --color-teal-tint: #E6F4F4;     /* Soft teal tint */
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography styles matching blueprint */
+.font-serif-title {
+  font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+}
+
+/* Small caps with wide letter-spacing, echoing "FOUNDATION" in the logo */
+.cohort-badge {
+  font-variant: all-small-caps;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+}
+
+/* Signature gold star motif */
+.star-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--color-gold);
+}
+
+.star-divider::before,
+.star-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(245, 166, 35, 0.35);
+}
+
+.star-divider:not(:empty)::before {
+  margin-right: 0.75em;
+}
+
+.star-divider:not(:empty)::after {
+  margin-left: 0.75em;
+}

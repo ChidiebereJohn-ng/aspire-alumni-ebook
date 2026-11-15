@@ -1,0 +1,18 @@
+name = "aspire-alumni-ebook"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aspire-alumni-db"
+database_id = "84eac166-da57-42ec-8f14-07f5ab5d56b0"
+
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "aspire-alumni-storage"
+
+[vars]
+ENVIRONMENT = "development"
+TURNSTILE_SITE_KEY = "1x00000000000000000000AA"
+TURNSTILE_SECRET_KEY = "1x0000000000000000000000000000000AA"
