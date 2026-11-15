@@ -18,6 +18,7 @@ import {
   Calendar,
   X
 } from 'lucide-react';
+import { EBookGeneratorModal } from './EBookGeneratorModal';
 import { NIGERIAN_STATES, INDUSTRIES, COHORTS } from '../constants/options';
 
 interface AdminDashboardProps {
@@ -80,6 +81,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [editingItem, setEditingItem] = useState<AlumniItem | null>(null);
   const [editFields, setEditFields] = useState<any>({});
   const [savingEdit, setSavingEdit] = useState(false);
+  const [isEBookModalOpen, setIsEBookModalOpen] = useState(false);
 
   // Message notifications
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -320,7 +322,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               </span>
             </div>
             <button
-              onClick={() => showFeedback('success', 'E-Book generator ready in Module 5.')}
+              onClick={() => setIsEBookModalOpen(true)}
               className="px-3 py-1.5 rounded-xl bg-brand-teal text-white font-bold text-xs hover:bg-brand-teal-dark transition-colors flex items-center gap-1.5"
             >
               <BookOpen className="w-3.5 h-3.5" />
@@ -821,6 +823,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* E-Book Generator Modal */}
+      {isEBookModalOpen && (
+        <EBookGeneratorModal
+          alumni={items}
+          isAdmin={true}
+          onClose={() => setIsEBookModalOpen(false)}
+        />
       )}
     </div>
   );

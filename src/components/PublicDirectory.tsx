@@ -10,6 +10,8 @@ import {
 import { AlumniProfile, AlumniProfileModal } from './AlumniProfileModal';
 import { FeaturedAlumniStrip } from './FeaturedAlumniStrip';
 import { AlumniByStateView } from './AlumniByStateView';
+import { EBookGeneratorModal } from './EBookGeneratorModal';
+import { PortraitCardModal } from './PortraitCardModal';
 import { NIGERIAN_STATES, INDUSTRIES, COHORTS } from '../constants/options';
 
 interface PublicDirectoryProps {
@@ -19,7 +21,6 @@ interface PublicDirectoryProps {
 
 export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
   onOpenSubmissionForm,
-  onOpenPortraitCard,
 }) => {
   const [alumni, setAlumni] = useState<AlumniProfile[]>([]);
   const [featured, setFeatured] = useState<AlumniProfile[]>([]);
@@ -37,6 +38,8 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
 
   const [activeView, setActiveView] = useState<'grid' | 'states'>('grid');
   const [selectedProfile, setSelectedProfile] = useState<AlumniProfile | null>(null);
+  const [portraitAlumni, setPortraitAlumni] = useState<AlumniProfile | null>(null);
+  const [isEBookModalOpen, setIsEBookModalOpen] = useState(false);
 
   useEffect(() => {
     fetchDirectory();
@@ -66,7 +69,6 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
     }
   };
 
-  // Local instant live filtering as user types in search bar
   const filteredAlumni = alumni.filter((item) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
@@ -82,7 +84,6 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
     );
   });
 
-  // If directory is turned off by admin
   if (settings.directory_public === 0) {
     return (
       <div className="max-w-lg mx-auto py-20 px-4 text-center space-y-4">
@@ -120,7 +121,6 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
           Alumni Directory & Yearbook
         </h1>
 
-        {/* Blueprint Quote Requirement */}
         <p className="font-serif-title text-xl sm:text-2xl italic text-brand-teal max-w-2xl mx-auto">
           "Meet the alumni who came before you."
         </p>
@@ -133,9 +133,7 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
         {settings.ebook_public === 1 && (
           <div className="pt-2">
             <button
-              onClick={() => {
-                alert('E-Book generation downloads are configured in Module 5.');
-              }}
+              onClick={() => setIsEBookModalOpen(true)}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-brand-teal hover:bg-brand-teal-dark text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-lg"
             >
               <BookOpen className="w-4 h-4 text-brand-gold" />
@@ -153,10 +151,9 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
         />
       )}
 
-      {/* Search & Filter Bar (One row layout per Blueprint) */}
+      {/* Search & Filter Bar */}
       <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-brand-teal/10 space-y-3">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
-          {/* Live Search Bar */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
             <input
@@ -168,9 +165,7 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
             />
           </div>
 
-          {/* Filter Dropdowns */}
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
-            {/* Cohort Dropdown */}
             <select
               value={cohortFilter}
               onChange={(e) => setCohortFilter(e.target.value)}
@@ -182,7 +177,6 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
               ))}
             </select>
 
-            {/* Industry Dropdown */}
             <select
               value={industryFilter}
               onChange={(e) => setIndustryFilter(e.target.value)}
@@ -194,7 +188,6 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
               ))}
             </select>
 
-            {/* State Dropdown */}
             <select
               value={stateFilter}
               onChange={(e) => setStateFilter(e.target.value)}
@@ -206,7 +199,6 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
               ))}
             </select>
 
-            {/* View Mode Toggle (Grid vs State Tiles) */}
             <div className="flex items-center gap-1 border border-gray-200 p-1 rounded-2xl bg-brand-cream/60">
               <button
                 type="button"
@@ -236,7 +228,6 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
           </div>
         </div>
 
-        {/* Active Filters Summary */}
         {(cohortFilter !== 'all' || industryFilter !== 'all' || stateFilter !== 'all' || searchQuery) && (
           <div className="flex items-center justify-between text-xs text-brand-charcoal/70 pt-1">
             <span>
@@ -257,7 +248,7 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
         )}
       </div>
 
-      {/* VIEW 1: STATE TILES (Section 6.10) */}
+      {/* VIEW 1: STATE TILES */}
       {activeView === 'states' && (
         <AlumniByStateView
           stateCounts={stateCounts}
@@ -270,9 +261,6 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
       )}
 
       {/* VIEW 2: ALUMNI CARD GRID */}
-      {/* Blueprint Card Specification:
-          "Cards are all the same size and show round photo, name, teal cohort badge, and industry;
-           role, employer, and city appear on the profile page. Clicking a card opens a profile with their advice" */}
       {loading ? (
         <div className="py-20 text-center space-y-3">
           <div className="w-8 h-8 border-3 border-brand-teal border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -296,7 +284,6 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
               onClick={() => setSelectedProfile(item)}
               className="bg-white rounded-2xl p-5 shadow-xs hover:shadow-md transition-all border border-brand-teal/10 hover:border-brand-teal/40 cursor-pointer flex flex-col items-center text-center justify-between h-[230px] group"
             >
-              {/* Round Photo */}
               <div className="relative mt-1">
                 <img
                   src={item.photo_key ? `/api/photo/${item.photo_key}` : `/api/photo/${item.id}.jpg`}
@@ -310,7 +297,6 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
                 )}
               </div>
 
-              {/* Name & Cohort Badge */}
               <div className="space-y-1 w-full px-1">
                 <h3 className="font-serif-title font-bold text-base text-brand-charcoal truncate group-hover:text-brand-teal transition-colors">
                   {item.first_name} {item.surname}
@@ -323,7 +309,6 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
                 </div>
               </div>
 
-              {/* Industry */}
               <div className="w-full pt-1 border-t border-gray-100">
                 <span className="text-[11px] text-brand-charcoal/70 truncate block font-medium">
                   {item.industry}
@@ -339,7 +324,23 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
         <AlumniProfileModal
           alumni={selectedProfile}
           onClose={() => setSelectedProfile(null)}
-          onOpenPortraitCard={onOpenPortraitCard}
+          onOpenPortraitCard={(alum) => setPortraitAlumni(alum)}
+        />
+      )}
+
+      {/* Social Portrait Card Modal */}
+      {portraitAlumni && (
+        <PortraitCardModal
+          alumni={portraitAlumni}
+          onClose={() => setPortraitAlumni(null)}
+        />
+      )}
+
+      {/* E-Book Generator Modal */}
+      {isEBookModalOpen && (
+        <EBookGeneratorModal
+          alumni={alumni}
+          onClose={() => setIsEBookModalOpen(false)}
         />
       )}
     </div>
