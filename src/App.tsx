@@ -6,15 +6,18 @@ import {
   Palette, 
   CheckCircle2, 
   Layers, 
-  Smartphone,
-  RefreshCw,
-  ShieldCheck,
-  UserPlus,
-  Compass
+  Smartphone, 
+  RefreshCw, 
+  ShieldCheck, 
+  UserPlus, 
+  Compass, 
+  Lock 
 } from 'lucide-react';
 import { SubmissionForm } from './components/SubmissionForm';
 import { SubmissionSuccess } from './components/SubmissionSuccess';
 import { EditProfile } from './components/EditProfile';
+import { AdminLogin } from './components/AdminLogin';
+import { AdminDashboard } from './components/AdminDashboard';
 
 interface HealthData {
   status: string;
@@ -38,7 +41,7 @@ interface HealthData {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'submit' | 'system' | 'edit'>('submit');
+  const [activeTab, setActiveTab] = useState<'submit' | 'system' | 'edit' | 'admin'>('submit');
   const [submittedData, setSubmittedData] = useState<{
     id: string;
     edit_token: string;
@@ -47,14 +50,39 @@ export default function App() {
   } | null>(null);
   const [editToken, setEditToken] = useState<string | null>(null);
 
+  // Admin state
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
+  const [checkingAuth, setCheckingAuth] = useState<boolean>(false);
+
   const [health, setHealth] = useState<HealthData | null>(null);
   const [loadingHealth, setLoadingHealth] = useState(false);
   const [healthError, setHealthError] = useState<string | null>(null);
 
-  // URL route parsing (e.g. /edit/:token or ?token=)
+  // Check admin session on initial load or when admin tab selected
+  const checkAdminAuth = async () => {
+    setCheckingAuth(true);
+    try {
+      const res = await fetch('/api/admin/me');
+      if (res.ok) {
+        const data = await res.json();
+        setIsAdminAuthenticated(Boolean(data.authenticated));
+      } else {
+        setIsAdminAuthenticated(false);
+      }
+    } catch {
+      setIsAdminAuthenticated(false);
+    } finally {
+      setCheckingAuth(false);
+    }
+  };
+
+  // URL route parsing (e.g. /admin, /edit/:token, /join)
   useEffect(() => {
     const path = window.location.pathname;
-    if (path.startsWith('/edit/')) {
+    if (path === '/admin') {
+      setActiveTab('admin');
+      checkAdminAuth();
+    } else if (path.startsWith('/edit/')) {
       const token = path.replace('/edit/', '').trim();
       if (token) {
         setEditToken(token);
@@ -69,6 +97,19 @@ export default function App() {
       }
     }
   }, []);
+
+  const handleAdminTabClick = () => {
+    setActiveTab('admin');
+    checkAdminAuth();
+  };
+
+  const handleAdminLogout = async () => {
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' });
+    } finally {
+      setIsAdminAuthenticated(false);
+    }
+  };
 
   const fetchHealth = async () => {
     setLoadingHealth(true);
@@ -128,7 +169,7 @@ export default function App() {
           </div>
           
           {/* Navigation Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => { setActiveTab('submit'); setSubmittedData(null); }}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
@@ -150,7 +191,23 @@ export default function App() {
               }`}
             >
               <Compass className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Architecture &</span> Tokens
+              <span className="hidden sm:inline">Foundations &</span> Specs
+            </button>
+
+            {/* Admin Dashboard Tab */}
+            <button
+              onClick={handleAdminTabClick}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                activeTab === 'admin' 
+                  ? 'bg-brand-charcoal text-white shadow-xs' 
+                  : 'bg-gray-100 text-brand-charcoal hover:bg-gray-200'
+              }`}
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Admin</span>
+              {isAdminAuthenticated && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              )}
             </button>
           </div>
         </div>
@@ -192,7 +249,23 @@ export default function App() {
           />
         )}
 
-        {/* TAB 3: SYSTEM ARCHITECTURE & DESIGN TOKENS (Module 1 Foundation) */}
+        {/* TAB 3: ADMIN PORTAL (Module 3) */}
+        {activeTab === 'admin' && (
+          <div>
+            {checkingAuth ? (
+              <div className="py-20 text-center space-y-3">
+                <div className="w-8 h-8 border-3 border-brand-teal border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p className="text-xs text-brand-charcoal/60">Verifying administrator credentials...</p>
+              </div>
+            ) : !isAdminAuthenticated ? (
+              <AdminLogin onSuccess={() => setIsAdminAuthenticated(true)} />
+            ) : (
+              <AdminDashboard onLogout={handleAdminLogout} />
+            )}
+          </div>
+        )}
+
+        {/* TAB 4: SYSTEM ARCHITECTURE & DESIGN TOKENS (Module 1 Foundation) */}
         {activeTab === 'system' && (
           <div className="space-y-10">
             {/* Hero */}
