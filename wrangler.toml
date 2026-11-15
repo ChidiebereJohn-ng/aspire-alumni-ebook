@@ -8,9 +8,9 @@ binding = "DB"
 database_name = "aspire-alumni-db"
 database_id = "84eac166-da57-42ec-8f14-07f5ab5d56b0"
 
-[[r2_buckets]]
-binding = "STORAGE"
-bucket_name = "aspire-alumni-storage"
+# [[r2_buckets]]
+# binding = "STORAGE"
+# bucket_name = "aspire-alumni-storage"
 
 [vars]
 ENVIRONMENT = "development"
