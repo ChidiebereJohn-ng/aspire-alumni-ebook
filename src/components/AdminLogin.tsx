@@ -69,9 +69,10 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess }) => {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter admin password..."
+                placeholder="Enter password..."
                 className="w-full pl-4 pr-11 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-teal/50 text-sm"
               />
               <button
@@ -82,9 +83,6 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess }) => {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-[11px] text-brand-charcoal/50">
-              Default development password: <code className="bg-gray-100 px-1 py-0.5 rounded font-mono text-brand-teal font-semibold">aspire2026admin</code>
-            </p>
           </div>
 
           <button

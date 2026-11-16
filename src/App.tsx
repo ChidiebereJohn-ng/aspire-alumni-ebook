@@ -108,6 +108,7 @@ export default function App() {
 
   const handleAdminTabClick = () => {
     setActiveTab('admin');
+    window.history.pushState(null, '', '/admin');
     checkAdminAuth();
   };
 
@@ -116,6 +117,8 @@ export default function App() {
       await fetch('/api/admin/logout', { method: 'POST' });
     } finally {
       setIsAdminAuthenticated(false);
+      setActiveTab('directory');
+      window.history.pushState(null, '', '/');
     }
   };
 
@@ -178,9 +181,13 @@ export default function App() {
           
           {/* Navigation Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Public Directory Tab (Module 4) */}
+            {/* Public Directory Tab */}
             <button
-              onClick={() => { setActiveTab('directory'); setSubmittedData(null); }}
+              onClick={() => { 
+                setActiveTab('directory'); 
+                setSubmittedData(null); 
+                window.history.pushState(null, '', '/');
+              }}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
                 activeTab === 'directory' 
                   ? 'bg-brand-teal text-white shadow-xs' 
@@ -191,9 +198,13 @@ export default function App() {
               <span>Directory</span>
             </button>
 
-            {/* Submission Form Tab (Module 2) */}
+            {/* Submission Form Tab */}
             <button
-              onClick={() => { setActiveTab('submit'); setSubmittedData(null); }}
+              onClick={() => { 
+                setActiveTab('submit'); 
+                setSubmittedData(null); 
+                window.history.pushState(null, '', '/join');
+              }}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
                 activeTab === 'submit' 
                   ? 'bg-brand-teal text-white shadow-xs' 
@@ -201,37 +212,41 @@ export default function App() {
               }`}
             >
               <UserPlus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Join</span> Directory
+              <span>Join Directory</span>
             </button>
 
-            {/* Admin Dashboard Tab (Module 3) */}
-            <button
-              onClick={handleAdminTabClick}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                activeTab === 'admin' 
-                  ? 'bg-brand-charcoal text-white shadow-xs' 
-                  : 'bg-gray-100 text-brand-charcoal hover:bg-gray-200'
-              }`}
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Admin</span>
-              {isAdminAuthenticated && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              )}
-            </button>
+            {/* Admin Console Tab - ONLY visible if authenticated or on /admin */}
+            {(isAdminAuthenticated || activeTab === 'admin') && (
+              <button
+                onClick={handleAdminTabClick}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                  activeTab === 'admin' 
+                    ? 'bg-brand-charcoal text-white shadow-xs' 
+                    : 'bg-gray-100 text-brand-charcoal hover:bg-gray-200'
+                }`}
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Admin Console</span>
+                {isAdminAuthenticated && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                )}
+              </button>
+            )}
 
-            {/* Architecture Tab */}
-            <button
-              onClick={() => setActiveTab('system')}
-              className={`p-1.5 rounded-xl transition-colors ${
-                activeTab === 'system' 
-                  ? 'bg-brand-teal text-white' 
-                  : 'text-gray-400 hover:text-brand-teal'
-              }`}
-              title="System Architecture & Tokens"
-            >
-              <Compass className="w-4 h-4" />
-            </button>
+            {/* Architecture Tab - discreetly visible only to authenticated admins */}
+            {isAdminAuthenticated && (
+              <button
+                onClick={() => setActiveTab('system')}
+                className={`p-1.5 rounded-xl transition-colors ${
+                  activeTab === 'system' 
+                    ? 'bg-brand-teal text-white' 
+                    : 'text-gray-400 hover:text-brand-teal'
+                }`}
+                title="System Architecture & Tokens"
+              >
+                <Compass className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
         {/* Thin Gold Line underneath directory header as required by Blueprint */}
@@ -509,9 +524,17 @@ export default function App() {
             <img src="/logo.png" alt="Logo" className="h-6 w-auto" />
             <span className="font-serif-title font-semibold text-brand-charcoal">Aspire for Excellence Foundation</span>
           </div>
-          <div className="flex items-center gap-1.5 text-brand-gold">
-            <Star className="w-3.5 h-3.5 fill-brand-gold" />
-            <span>Built with Cloudflare Pages, D1 & R2</span>
+          <div className="flex items-center gap-2 text-brand-charcoal/50 text-[11px]">
+            <span>© {new Date().getFullYear()} Aspire for Excellence Foundation.</span>
+            {/* Subtle discreet staff entrance */}
+            <button
+              onClick={handleAdminTabClick}
+              title="Staff Portal"
+              aria-label="Staff Portal"
+              className="text-brand-charcoal/20 hover:text-brand-teal transition-colors p-0.5 focus:outline-none"
+            >
+              •
+            </button>
           </div>
         </div>
       </footer>

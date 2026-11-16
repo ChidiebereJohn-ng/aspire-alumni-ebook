@@ -1,5 +1,5 @@
 export const SESSION_COOKIE_NAME = 'aspire_admin_session';
-export const DEFAULT_ADMIN_PASSWORD = 'aspire2026admin';
+export const DEFAULT_ADMIN_PASSWORD = '@ASPIRE_@';
 export const DEFAULT_SESSION_SECRET = 'aspire-alumni-secret-encryption-key-2026';
 
 // Helper to sign data using HMAC-SHA256
