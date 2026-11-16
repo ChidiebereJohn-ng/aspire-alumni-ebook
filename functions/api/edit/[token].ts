@@ -91,6 +91,18 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
           console.warn('Failed to upload photo to R2 storage:', r2Err);
         }
       }
+
+      // Persist photo directly into Cloudflare D1 database (guaranteed persistence)
+      if (env.DB) {
+        try {
+          await env.DB.prepare(`
+            INSERT OR REPLACE INTO photos (key, content_type, data)
+            VALUES (?, ?, ?)
+          `).bind(photoKey, 'image/jpeg', photo).run();
+        } catch (d1PhotoErr) {
+          console.warn('Failed to persist photo in D1:', d1PhotoErr);
+        }
+      }
     }
 
     const cohortYearNum = parseInt(cohort_year, 10) || record.cohort_year;

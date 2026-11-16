@@ -10,6 +10,13 @@ export const PhotoCropper: React.FC<PhotoCropperProps> = ({ onCropComplete, init
   const [imageSrc, setImageSrc] = useState<string | null>(initialImage || null);
   const [croppedPreview, setCroppedPreview] = useState<string | null>(initialImage || null);
   const [isCropping, setIsCropping] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (initialImage) {
+      setCroppedPreview(initialImage);
+      setImageSrc(initialImage);
+    }
+  }, [initialImage]);
   const [zoom, setZoom] = useState<number>(1);
   const [rotation, setRotation] = useState<number>(0);
   const [offset, setOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });

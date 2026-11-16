@@ -58,6 +58,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Permanent Delete
     if (action === 'permanent_delete') {
       await env.DB.prepare(`DELETE FROM alumni WHERE id = ?`).bind(id).run();
+      try {
+        await env.DB.prepare(`DELETE FROM photos WHERE key = ? OR key = ?`).bind(id, `${id}.jpg`).run();
+      } catch {}
       return new Response(JSON.stringify({ success: true, message: 'Entry permanently removed.' }));
     }
 

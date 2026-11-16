@@ -44,6 +44,15 @@ CREATE TABLE IF NOT EXISTS settings (
 -- Initialize default settings row if not present
 INSERT OR IGNORE INTO settings (id, directory_public, ebook_public) VALUES (1, 1, 0);
 
+CREATE TABLE IF NOT EXISTS photos (
+  key TEXT PRIMARY KEY,
+  content_type TEXT DEFAULT 'image/jpeg',
+  data TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_photos_key ON photos(key);
+
 CREATE TABLE IF NOT EXISTS ebooks (
   id TEXT PRIMARY KEY,
   edition_name TEXT,
