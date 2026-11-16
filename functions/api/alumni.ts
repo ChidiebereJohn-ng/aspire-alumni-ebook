@@ -36,6 +36,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       LIMIT 10
     `).all<AlumniRecord>();
 
+    // 3b. Fetch Lead Mentor ("The Boss") & Mentorship Team
+    const leadMentorRecord = await env.DB.prepare(`
+      SELECT * FROM alumni
+      WHERE deleted_at IS NULL AND status = 'approved' AND leadership_role = 'lead_mentor'
+      LIMIT 1
+    `).first<AlumniRecord>();
+
+    const leadershipTeamResult = await env.DB.prepare(`
+      SELECT * FROM alumni
+      WHERE deleted_at IS NULL AND status = 'approved' AND leadership_role = 'team'
+      ORDER BY updated_at DESC
+    `).all<AlumniRecord>();
+
     // 4. Build dynamic query for approved alumni grid
     let query = `
       SELECT * FROM alumni
@@ -98,6 +111,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       advice: item.advice,
       linkedin_url: item.linkedin_url,
       featured: item.featured,
+      leadership_role: item.leadership_role || null,
+      leadership_title: item.leadership_title || null,
       country: item.country,
       hide_employer: item.hide_employer,
       hide_city: item.hide_city,
@@ -106,6 +121,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     const publicAlumni = records.map(sanitize);
     const publicFeatured = featuredResult.results.map(sanitize);
+    const publicLeadMentor = leadMentorRecord ? sanitize(leadMentorRecord) : null;
+    const publicLeadershipTeam = leadershipTeamResult.results.map(sanitize);
 
     // Record directory view event (non-blocking)
     try {
@@ -125,6 +142,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         },
         alumni: publicAlumni,
         featured: publicFeatured,
+        leadMentor: publicLeadMentor,
+        leadershipTeam: publicLeadershipTeam,
         stateCounts,
         total: publicAlumni.length,
       }),

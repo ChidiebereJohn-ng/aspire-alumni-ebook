@@ -26,6 +26,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         COUNT(CASE WHEN deleted_at IS NULL AND status = 'approved' THEN 1 END) as approved_count,
         COUNT(CASE WHEN deleted_at IS NULL AND status = 'hidden' THEN 1 END) as hidden_count,
         COUNT(CASE WHEN deleted_at IS NOT NULL AND deleted_at >= datetime('now', '-30 days') THEN 1 END) as deleted_count,
+        COUNT(CASE WHEN deleted_at IS NULL AND leadership_role IS NOT NULL THEN 1 END) as leadership_count,
         COUNT(CASE WHEN deleted_at IS NULL THEN 1 END) as total_active
       FROM alumni
     `).first<{
@@ -33,6 +34,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       approved_count: number;
       hidden_count: number;
       deleted_count: number;
+      leadership_count: number;
       total_active: number;
     }>();
 
@@ -56,6 +58,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     if (view === 'deleted') {
       query = `SELECT * FROM alumni WHERE deleted_at IS NOT NULL AND deleted_at >= datetime('now', '-30 days')`;
+    } else if (view === 'leadership') {
+      query = `SELECT * FROM alumni WHERE deleted_at IS NULL AND leadership_role IS NOT NULL`;
     } else if (view === 'pending') {
       query = `SELECT * FROM alumni WHERE deleted_at IS NULL AND status = 'pending'`;
     } else if (view === 'approved') {

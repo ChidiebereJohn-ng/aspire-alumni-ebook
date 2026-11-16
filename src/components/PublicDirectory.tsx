@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { AlumniProfile, AlumniProfileModal } from './AlumniProfileModal';
 import { FeaturedAlumniStrip } from './FeaturedAlumniStrip';
+import { LeadershipSection } from './LeadershipSection';
 import { AlumniByStateView } from './AlumniByStateView';
 import { EBookGeneratorModal } from './EBookGeneratorModal';
 import { PortraitCardModal } from './PortraitCardModal';
@@ -24,6 +25,8 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
 }) => {
   const [alumni, setAlumni] = useState<AlumniProfile[]>([]);
   const [featured, setFeatured] = useState<AlumniProfile[]>([]);
+  const [leadMentor, setLeadMentor] = useState<AlumniProfile | null>(null);
+  const [leadershipTeam, setLeadershipTeam] = useState<AlumniProfile[]>([]);
   const [stateCounts, setStateCounts] = useState<Record<string, number>>({});
   const [settings, setSettings] = useState<{ directory_public: number; ebook_public: number }>({
     directory_public: 1,
@@ -89,6 +92,8 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
         const data = await res.json();
         setAlumni(data.alumni || []);
         setFeatured(data.featured || []);
+        if (data.leadMentor !== undefined) setLeadMentor(data.leadMentor);
+        if (data.leadershipTeam) setLeadershipTeam(data.leadershipTeam);
         setStateCounts(data.stateCounts || {});
         if (data.settings) setSettings(data.settings);
       }
@@ -172,6 +177,13 @@ export const PublicDirectory: React.FC<PublicDirectoryProps> = ({
           </div>
         )}
       </div>
+
+      {/* Leadership & Lead Mentor Section ("The Boss" & Mentorship Team) */}
+      <LeadershipSection
+        leadMentor={leadMentor}
+        leadershipTeam={leadershipTeam}
+        onSelectAlumni={(item) => handleSelectProfile(item)}
+      />
 
       {/* Featured Alumni Strip (Section 6.9) */}
       {featured.length > 0 && (

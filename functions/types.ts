@@ -27,6 +27,8 @@ export interface AlumniRecord {
   hide_employer?: number;
   hide_city?: number;
   featured?: number;
+  leadership_role?: 'lead_mentor' | 'team' | null;
+  leadership_title?: string | null;
   country?: string;
   removed_at?: string | null;
   deleted_at?: string | null;

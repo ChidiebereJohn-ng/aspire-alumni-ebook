@@ -23,6 +23,8 @@ export interface AlumniProfile {
   advice: string | null;
   linkedin_url?: string | null;
   featured?: number;
+  leadership_role?: 'lead_mentor' | 'team' | null;
+  leadership_title?: string | null;
   hide_employer?: number;
   hide_city?: number;
 }
@@ -99,6 +101,16 @@ export const AlumniProfileModal: React.FC<AlumniProfileModalProps> = ({
 
           {/* Name & Industry */}
           <div className="space-y-1">
+            {alumni.leadership_role === 'lead_mentor' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-gold text-brand-charcoal uppercase tracking-wider mb-1">
+                👑 {alumni.leadership_title || 'Lead Mentor'}
+              </span>
+            )}
+            {alumni.leadership_role === 'team' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-teal text-white uppercase tracking-wider mb-1">
+                👥 {alumni.leadership_title || 'Foundation Mentor'}
+              </span>
+            )}
             <h2 className="font-serif-title text-2xl sm:text-3xl font-bold text-brand-charcoal">
               {alumni.first_name} {alumni.surname}
             </h2>

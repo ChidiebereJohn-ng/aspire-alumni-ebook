@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS alumni (
   hide_employer INTEGER DEFAULT 0 CHECK(hide_employer IN (0, 1)),
   hide_city INTEGER DEFAULT 0 CHECK(hide_city IN (0, 1)),
   featured INTEGER DEFAULT 0 CHECK(featured IN (0, 1)),
+  leadership_role TEXT DEFAULT NULL CHECK(leadership_role IN ('lead_mentor', 'team', NULL)),
+  leadership_title TEXT DEFAULT NULL,
   country TEXT DEFAULT 'Nigeria',
   removed_at DATETIME,
   deleted_at DATETIME,

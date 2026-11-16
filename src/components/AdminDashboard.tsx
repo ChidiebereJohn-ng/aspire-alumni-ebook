@@ -20,7 +20,9 @@ import {
   Upload,
   Download,
   BarChart2,
-  Layers
+  Layers,
+  Crown,
+  Users
 } from 'lucide-react';
 import { EBookGeneratorModal } from './EBookGeneratorModal';
 import { CsvImportModal } from './CsvImportModal';
@@ -50,6 +52,8 @@ interface AlumniItem {
   hide_employer?: number;
   hide_city?: number;
   featured?: number;
+  leadership_role?: 'lead_mentor' | 'team' | null;
+  leadership_title?: string | null;
   country?: string;
   removed_at?: string | null;
   deleted_at?: string | null;
@@ -67,11 +71,12 @@ interface DashboardStats {
   approved_count: number;
   hidden_count: number;
   deleted_count: number;
+  leadership_count: number;
   total_active: number;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
-  const [view, setView] = useState<'pending' | 'all' | 'approved' | 'hidden' | 'deleted'>('pending');
+  const [view, setView] = useState<'pending' | 'all' | 'approved' | 'leadership' | 'hidden' | 'deleted'>('pending');
   const [cohortFilter, setCohortFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -218,7 +223,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       linkedin_url: item.linkedin_url || '',
       hide_employer: Boolean(item.hide_employer),
       hide_city: Boolean(item.hide_city),
+      leadership_role: item.leadership_role || '',
+      leadership_title: item.leadership_title || '',
     });
+  };
+
+  const handleSetLeadMentor = (item: AlumniItem) => {
+    const title = window.prompt(
+      `Designate ${item.first_name} ${item.surname} as Lead Mentor ("The Boss"). Enter leadership title:`,
+      item.leadership_title || 'Founder & Lead Mentor'
+    );
+    if (title === null) return;
+    handleAction('set_lead_mentor', item.id, { title: title.trim() || 'Founder & Lead Mentor' });
+  };
+
+  const handleAddTeamMember = (item: AlumniItem) => {
+    const title = window.prompt(
+      `Add ${item.first_name} ${item.surname} to Foundation Mentorship Team. Enter mentorship title:`,
+      item.leadership_title || 'Foundation Mentor'
+    );
+    if (title === null) return;
+    handleAction('add_team_member', item.id, { title: title.trim() || 'Foundation Mentor' });
+  };
+
+  const handleRemoveLeadership = (item: AlumniItem) => {
+    if (!window.confirm(`Remove ${item.first_name} ${item.surname} from leadership/mentorship capacity? They will return to regular alumnus status.`)) return;
+    handleAction('remove_leadership', item.id);
   };
 
   const saveEditModal = async (e: React.FormEvent) => {
@@ -505,6 +535,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             </button>
 
             <button
+              onClick={() => setView('leadership')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                view === 'leadership'
+                  ? 'bg-brand-gold text-brand-charcoal shadow-sm'
+                  : 'bg-white text-brand-charcoal hover:bg-brand-cream border border-brand-gold/30'
+              }`}
+            >
+              <Crown className="w-3.5 h-3.5 text-brand-gold fill-brand-gold" />
+              <span>Leadership & Mentors</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                view === 'leadership' ? 'bg-white text-brand-charcoal' : 'bg-brand-gold/20 text-brand-charcoal'
+              }`}>
+                {stats?.leadership_count ?? 0}
+              </span>
+            </button>
+
+            <button
               onClick={() => setView('all')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 view === 'all'
@@ -595,7 +642,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               <div
                 key={item.id}
                 className={`bg-white rounded-2xl p-5 shadow-xs border transition-shadow hover:shadow-md flex flex-col justify-between space-y-4 ${
-                  item.is_duplicate 
+                  item.leadership_role === 'lead_mentor'
+                    ? 'border-2 border-brand-gold ring-2 ring-brand-gold/20'
+                    : item.leadership_role === 'team'
+                    ? 'border-2 border-brand-teal/60 ring-2 ring-brand-teal/15'
+                    : item.is_duplicate 
                     ? 'border-amber-300 ring-2 ring-amber-100' 
                     : item.featured 
                     ? 'border-brand-gold/60' 
@@ -603,6 +654,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 }`}
               >
                 <div className="space-y-3">
+                  {/* Leadership Role Banner */}
+                  {item.leadership_role === 'lead_mentor' && (
+                    <div className="p-2 rounded-lg bg-gradient-to-r from-amber-50 to-amber-100 border border-brand-gold/60 text-brand-charcoal text-[11px] flex items-center justify-between font-semibold">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <Crown className="w-3.5 h-3.5 text-brand-gold fill-brand-gold shrink-0" />
+                        <span className="font-bold text-amber-900">Lead Mentor ("The Boss")</span>
+                        <span className="text-[10px] text-amber-800 truncate">• {item.leadership_title || 'Lead Mentor'}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLeadership(item)}
+                        className="text-[10px] text-red-600 hover:text-red-800 underline shrink-0 ml-1 font-medium"
+                        title="Remove/Demote from leadership capacity"
+                      >
+                        Demote
+                      </button>
+                    </div>
+                  )}
+
+                  {item.leadership_role === 'team' && (
+                    <div className="p-2 rounded-lg bg-teal-50 border border-brand-teal/40 text-brand-charcoal text-[11px] flex items-center justify-between font-semibold">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <Users className="w-3.5 h-3.5 text-brand-teal shrink-0" />
+                        <span className="font-bold text-brand-teal">Mentorship Team</span>
+                        <span className="text-[10px] text-brand-charcoal/70 truncate">• {item.leadership_title || 'Foundation Mentor'}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLeadership(item)}
+                        className="text-[10px] text-red-600 hover:text-red-800 underline shrink-0 ml-1 font-medium"
+                        title="Remove/Demote from team"
+                      >
+                        Demote
+                      </button>
+                    </div>
+                  )}
+
                   {/* Duplicate Alert Banner (Section 6.2) */}
                   {item.is_duplicate && (
                     <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-[11px] text-rose-900 flex items-center justify-between font-semibold">
@@ -705,7 +793,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 </div>
 
                 {/* Card Actions Footer */}
-                <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2 text-xs">
+                <div className="pt-3 border-t border-gray-100 flex flex-col gap-2 text-xs">
                   {view === 'deleted' ? (
                     // Recently deleted actions
                     <div className="flex items-center justify-between w-full gap-2">
@@ -733,48 +821,102 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   ) : (
                     // Standard queue actions
                     <>
-                      <div className="flex items-center gap-1">
-                        {item.status !== 'approved' && (
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1">
+                          {item.status !== 'approved' && (
+                            <button
+                              onClick={() => handleAction('approve', item.id)}
+                              disabled={actionLoadingId === item.id}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-xs"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Approve
+                            </button>
+                          )}
+                          {item.status === 'approved' && (
+                            <button
+                              onClick={() => handleAction('hide', item.id)}
+                              disabled={actionLoadingId === item.id}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-brand-charcoal text-xs font-medium transition-colors"
+                            >
+                              <EyeOff className="w-3.5 h-3.5" />
+                              Hide
+                            </button>
+                          )}
                           <button
-                            onClick={() => handleAction('approve', item.id)}
-                            disabled={actionLoadingId === item.id}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-xs"
+                            onClick={() => openEditModal(item)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-brand-cream hover:bg-brand-teal-tint text-brand-teal text-xs font-semibold transition-colors"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Approve
+                            <Edit3 className="w-3.5 h-3.5" />
+                            Edit
                           </button>
-                        )}
-                        {item.status === 'approved' && (
-                          <button
-                            onClick={() => handleAction('hide', item.id)}
-                            disabled={actionLoadingId === item.id}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-brand-charcoal text-xs font-medium transition-colors"
-                          >
-                            <EyeOff className="w-3.5 h-3.5" />
-                            Hide
-                          </button>
-                        )}
+                        </div>
+
                         <button
-                          onClick={() => openEditModal(item)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-brand-cream hover:bg-brand-teal-tint text-brand-teal text-xs font-semibold transition-colors"
+                          onClick={() => {
+                            if (confirm(`Move ${item.first_name} ${item.surname} to Recently Deleted?`)) {
+                              handleAction('delete', item.id);
+                            }
+                          }}
+                          disabled={actionLoadingId === item.id}
+                          className="p-1.5 rounded-xl text-gray-400 hover:text-brand-red hover:bg-red-50 transition-colors"
+                          title="Delete (Move to Recently Deleted)"
                         >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          Edit
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          if (confirm(`Move ${item.first_name} ${item.surname} to Recently Deleted?`)) {
-                            handleAction('delete', item.id);
-                          }
-                        }}
-                        disabled={actionLoadingId === item.id}
-                        className="p-1.5 rounded-xl text-gray-400 hover:text-brand-red hover:bg-red-50 transition-colors"
-                        title="Delete (Move to Recently Deleted)"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {/* Leadership Designation Row */}
+                      <div className="pt-2 border-t border-dashed border-gray-200 flex items-center justify-between gap-1 text-[11px]">
+                        <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Leadership:</span>
+                        <div className="flex items-center gap-1.5">
+                          {item.leadership_role === 'lead_mentor' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveLeadership(item)}
+                              disabled={actionLoadingId === item.id}
+                              className="px-2 py-0.5 rounded-lg bg-amber-100 text-amber-900 font-semibold hover:bg-red-100 hover:text-red-800 transition-colors"
+                              title="Click to remove Lead Mentor role"
+                            >
+                              👑 Lead Mentor (Demote)
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleSetLeadMentor(item)}
+                              disabled={actionLoadingId === item.id}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-brand-cream hover:bg-amber-100 text-brand-charcoal hover:text-amber-900 font-medium transition-colors border border-amber-200"
+                              title="Make Lead Mentor ('The Boss')"
+                            >
+                              <Crown className="w-3 h-3 text-brand-gold fill-brand-gold" />
+                              Make Boss
+                            </button>
+                          )}
+
+                          {item.leadership_role === 'team' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveLeadership(item)}
+                              disabled={actionLoadingId === item.id}
+                              className="px-2 py-0.5 rounded-lg bg-teal-100 text-brand-teal font-semibold hover:bg-red-100 hover:text-red-800 transition-colors"
+                              title="Click to remove from team"
+                            >
+                              👥 Team (Demote)
+                            </button>
+                          ) : item.leadership_role !== 'lead_mentor' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleAddTeamMember(item)}
+                              disabled={actionLoadingId === item.id}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-brand-cream hover:bg-teal-100 text-brand-charcoal hover:text-brand-teal font-medium transition-colors border border-teal-200"
+                              title="Add to Mentorship Team"
+                            >
+                              <Users className="w-3 h-3 text-brand-teal" />
+                              Add Team
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
                     </>
                   )}
                 </div>
@@ -907,6 +1049,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   onChange={(e) => setEditFields({ ...editFields, advice: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs"
                 />
+              </div>
+
+              {/* Leadership Capacity & Title */}
+              <div className="p-3 bg-brand-cream/60 rounded-2xl border border-brand-teal/15 space-y-2.5">
+                <div className="flex items-center gap-1.5">
+                  <Crown className="w-3.5 h-3.5 text-brand-gold fill-brand-gold" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-brand-charcoal">
+                    Leadership & Mentorship Capacity
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-brand-charcoal/70">Role</label>
+                    <select
+                      value={editFields.leadership_role}
+                      onChange={(e) => setEditFields({ ...editFields, leadership_role: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-gray-200 text-xs bg-white"
+                    >
+                      <option value="">None (Regular Alumnus)</option>
+                      <option value="lead_mentor">👑 Lead Mentor ("The Boss")</option>
+                      <option value="team">👥 Mentorship Team</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-brand-charcoal/70">Displayed Title</label>
+                    <input
+                      type="text"
+                      placeholder={editFields.leadership_role === 'lead_mentor' ? 'Founder & Lead Mentor' : 'Foundation Mentor'}
+                      value={editFields.leadership_title}
+                      onChange={(e) => setEditFields({ ...editFields, leadership_title: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-gray-200 text-xs bg-white"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t">

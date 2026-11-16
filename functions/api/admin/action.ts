@@ -61,6 +61,44 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return new Response(JSON.stringify({ success: true, message: 'Entry permanently removed.' }));
     }
 
+    // Set as Lead Mentor ("The Boss")
+    if (action === 'set_lead_mentor') {
+      const title = fields?.title || 'Founder & Lead Mentor';
+      // Demote previous lead mentor to team or null to maintain one primary Lead Mentor
+      await env.DB.prepare(`
+        UPDATE alumni SET leadership_role = 'team', updated_at = CURRENT_TIMESTAMP
+        WHERE leadership_role = 'lead_mentor'
+      `).run();
+
+      await env.DB.prepare(`
+        UPDATE alumni SET leadership_role = 'lead_mentor', leadership_title = ?, status = 'approved', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(title, id).run();
+
+      return new Response(JSON.stringify({ success: true, message: 'Designated as Foundation Lead Mentor.' }));
+    }
+
+    // Add to Mentorship / Foundation Team
+    if (action === 'add_team_member') {
+      const title = fields?.title || 'Foundation Mentor';
+      await env.DB.prepare(`
+        UPDATE alumni SET leadership_role = 'team', leadership_title = ?, status = 'approved', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(title, id).run();
+
+      return new Response(JSON.stringify({ success: true, message: 'Added to Leadership & Mentorship Team.' }));
+    }
+
+    // Remove from Lead Mentor / Team (revert to regular alumnus)
+    if (action === 'remove_leadership') {
+      await env.DB.prepare(`
+        UPDATE alumni SET leadership_role = NULL, leadership_title = NULL, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(id).run();
+
+      return new Response(JSON.stringify({ success: true, message: 'Removed from leadership capacity.' }));
+    }
+
     // Toggle Featured Status
     if (action === 'toggle_featured') {
       const current = await env.DB.prepare('SELECT featured FROM alumni WHERE id = ?').bind(id).first<{ featured: number }>();
@@ -85,6 +123,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         linkedin_url,
         hide_employer,
         hide_city,
+        leadership_role,
+        leadership_title,
       } = fields;
 
       await env.DB.prepare(`
@@ -101,6 +141,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           linkedin_url = ?,
           hide_employer = ?,
           hide_city = ?,
+          leadership_role = ?,
+          leadership_title = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).bind(
@@ -116,6 +158,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         linkedin_url || null,
         hide_employer ? 1 : 0,
         hide_city ? 1 : 0,
+        leadership_role || null,
+        leadership_title || null,
         id
       ).run();
 
