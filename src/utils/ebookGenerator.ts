@@ -19,6 +19,85 @@ const WHITE = rgb(1, 1, 1);
 const SOFT_TEAL = rgb(0.902, 0.957, 0.957);  // #E6F4F4
 const GRAY_TEXT = rgb(0.35, 0.40, 0.45);
 
+// Normalized 5-point star SVG path (radius ~8)
+const STAR_SVG_PATH = 'M 0 -8 L 2.35 -2.5 L 8.35 -2.5 L 3.5 1.2 L 5.2 6.9 L 0 3.3 L -5.2 6.9 L -3.5 1.2 L -8.35 -2.5 L -2.35 -2.5 Z';
+
+/**
+ * Draw a crisp vector 5-point gold star that never relies on font encoding.
+ */
+function drawGoldStar(page: any, x: number, y: number, scale = 1, color = GOLD) {
+  try {
+    page.drawSvgPath(STAR_SVG_PATH, {
+      x,
+      y,
+      scale,
+      color,
+    });
+  } catch {
+    // Graceful fallback to small geometric diamond if SVG path fails
+    page.drawCircle({
+      x,
+      y,
+      size: scale * 3.5,
+      color,
+    });
+  }
+}
+
+/**
+ * Sanitizes any string to ensure it contains only characters supported by
+ * standard PDF 14 fonts (WinAnsiEncoding / Windows-1252).
+ * Replaces non-encodable Unicode typography, symbols, and emojis with clean ASCII equivalents.
+ */
+export function toPdfSafeText(input: string | null | undefined): string {
+  if (input === null || input === undefined) return '';
+  let str = String(input);
+
+  const replacements: [RegExp, string][] = [
+    // Smart Quotes & Apostrophes
+    [/[\u2018\u2019\u201A\u201B\u02BC\u02BB]/g, "'"],
+    [/[\u201C\u201D\u201E\u201F\u00AB\u00BB]/g, '"'],
+    // Dashes & Hyphens
+    [/[\u2014\u2015]/g, ' - '],
+    [/[\u2012\u2013\u2212]/g, '-'],
+    // Bullets & Symbols
+    [/[\u2022\u2023\u25E6\u2043\u2219]/g, ' - '],
+    [/[\u2026]/g, '...'],
+    [/[\u2605\u2606\u2B50\u2728]/g, '*'],
+    [/[\uD83D\uDCCD\uD83D\uDCCE\uD83D\uDDFA]/g, ''], // Map pins 📍 📌 🗺️
+    // Non-breaking spaces and special spaces
+    [/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' '],
+  ];
+
+  for (const [pattern, rep] of replacements) {
+    str = str.replace(pattern, rep);
+  }
+
+  // Strip all 4-byte UTF-16 surrogates (all emojis and supplementary symbols)
+  str = str.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '');
+
+  // Strip zero-width characters and variation selectors
+  str = str.replace(/[\u200B-\u200D\uFEFF\uFE00-\uFE0F]/g, '');
+
+  // Build clean string keeping printable ASCII (32-126) and valid WinAnsi characters
+  let clean = '';
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if ((code >= 32 && code <= 126) || code === 10 || code === 13 || code === 9) {
+      clean += str[i];
+    } else if (code >= 160 && code <= 255) {
+      // Extended Latin-1 (é, è, ü, ñ, etc.) valid in WinAnsi
+      clean += str[i];
+    } else {
+      if (/\s/.test(str[i])) {
+        clean += ' ';
+      }
+    }
+  }
+
+  return clean;
+}
+
 export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
 
@@ -89,8 +168,9 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
 
     // Small star motif with page number
     const pageStr = String(num);
-    page.drawText(`★  Page ${pageStr}`, {
-      x: PAGE_WIDTH - 95,
+    drawGoldStar(page, PAGE_WIDTH - 82, 28, 0.6);
+    page.drawText(toPdfSafeText(`Page ${pageStr}`), {
+      x: PAGE_WIDTH - 72,
       y: 25,
       size: 8,
       font: helveticaBold,
@@ -148,13 +228,9 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
   }
 
   // Cover Gold Star Motif
-  coverPage.drawText('★   ★   ★', {
-    x: PAGE_WIDTH / 2 - 38,
-    y: panelY - 45,
-    size: 16,
-    font: helveticaBold,
-    color: GOLD,
-  });
+  drawGoldStar(coverPage, PAGE_WIDTH / 2 - 28, panelY - 45, 1.1);
+  drawGoldStar(coverPage, PAGE_WIDTH / 2, panelY - 45, 1.5);
+  drawGoldStar(coverPage, PAGE_WIDTH / 2 + 28, panelY - 45, 1.1);
 
   // Cover Title
   const titleText = 'ALUMNI DIRECTORY';
@@ -168,9 +244,10 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
   });
 
   // Subtitle / Scope
-  const editionStr = options.editionName || `${options.scope === 'all' ? 'All Cohorts' : `Cohort ${options.scope}`} Edition`;
-  const editionWidth = helveticaBold.widthOfTextAtSize(editionStr.toUpperCase(), 13);
-  coverPage.drawText(editionStr.toUpperCase(), {
+  const rawEditionStr = options.editionName || `${options.scope === 'all' ? 'All Cohorts' : `Cohort ${options.scope}`} Edition`;
+  const editionStr = toPdfSafeText(rawEditionStr.toUpperCase());
+  const editionWidth = helveticaBold.widthOfTextAtSize(editionStr, 13);
+  coverPage.drawText(editionStr, {
     x: (PAGE_WIDTH - editionWidth) / 2,
     y: panelY - 125,
     size: 13,
@@ -178,7 +255,7 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
     color: GOLD,
   });
 
-  const tagline = '"Meet the alumni who came before you."';
+  const tagline = toPdfSafeText('"Meet the alumni who came before you."');
   const taglineWidth = timesItalic.widthOfTextAtSize(tagline, 14);
   coverPage.drawText(tagline, {
     x: (PAGE_WIDTH - taglineWidth) / 2,
@@ -388,7 +465,7 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
     });
 
     // Gold Star Divider Rule
-    const starRule = '★   ★   ★   COHORT DIVIDER   ★   ★   ★';
+    const starRule = 'COHORT DIVIDER';
     const ruleW = helveticaBold.widthOfTextAtSize(starRule, 10);
     divPage.drawText(starRule, {
       x: (PAGE_WIDTH - ruleW) / 2,
@@ -398,7 +475,11 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
       color: GOLD,
     });
 
-    const subMsg = `Aspire for Excellence Fellows • Graduating Class of ${cohort}`;
+    const starY = PAGE_HEIGHT / 2 - 7;
+    [-45, -30, -15].forEach((dx) => drawGoldStar(divPage, PAGE_WIDTH / 2 - ruleW / 2 + dx, starY, 0.6));
+    [15, 30, 45].forEach((dx) => drawGoldStar(divPage, PAGE_WIDTH / 2 + ruleW / 2 + dx, starY, 0.6));
+
+    const subMsg = toPdfSafeText(`Aspire for Excellence Fellows - Graduating Class of ${cohort}`);
     const subMsgW = timesItalic.widthOfTextAtSize(subMsg, 13);
     divPage.drawText(subMsg, {
       x: (PAGE_WIDTH - subMsgW) / 2,
@@ -523,7 +604,7 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
         });
 
         // Name
-        const fullName = `${item.first_name} ${item.surname}`;
+        const fullName = toPdfSafeText(`${item.first_name} ${item.surname}`);
         profPage.drawText(fullName, {
           x: cx + 15,
           y: cy + cardH - 105,
@@ -534,7 +615,8 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
         });
 
         // Industry
-        profPage.drawText(item.industry || 'Professional Sector', {
+        const indName = toPdfSafeText(item.industry || 'Professional Sector');
+        profPage.drawText(indName, {
           x: cx + 15,
           y: cy + cardH - 120,
           size: 8.5,
@@ -546,10 +628,10 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
         // Role & Employer (respect privacy)
         let roleLine = item.role || '';
         if (item.employer && !item.hide_employer) {
-          roleLine += roleLine ? ` • ${item.employer}` : item.employer;
+          roleLine += roleLine ? ` - ${item.employer}` : item.employer;
         }
         if (roleLine) {
-          profPage.drawText(roleLine.slice(0, 42), {
+          profPage.drawText(toPdfSafeText(roleLine).slice(0, 42), {
             x: cx + 15,
             y: cy + cardH - 140,
             size: 8,
@@ -560,14 +642,16 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
         }
 
         // Location
-        const loc = `${item.city && !item.hide_city ? `${item.city}, ` : ''}${item.state}`;
-        profPage.drawText(`📍 ${loc}`, {
-          x: cx + 15,
-          y: cy + cardH - 155,
-          size: 8,
-          font: helvetica,
-          color: GRAY_TEXT,
-        });
+        const loc = toPdfSafeText(`${item.city && !item.hide_city ? `${item.city}, ` : ''}${item.state}`);
+        if (loc) {
+          profPage.drawText(loc, {
+            x: cx + 15,
+            y: cy + cardH - 155,
+            size: 8,
+            font: helvetica,
+            color: GRAY_TEXT,
+          });
+        }
 
         // Divider in card
         profPage.drawLine({
@@ -579,7 +663,7 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
 
         // Advice quote snippet (Blueprint: "cut to about 100 characters, shown only if provided")
         if (item.advice) {
-          const cutAdvice = `"${item.advice.slice(0, 100).trim()}..."`;
+          const cutAdvice = `"${toPdfSafeText(item.advice).slice(0, 100).trim()}..."`;
           profPage.drawText('Words of Wisdom:', {
             x: cx + 15,
             y: cy + cardH - 188,
@@ -655,7 +739,7 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
   }
 
   // Closing words
-  const closingQuote = '"Striving Together • Reaching Higher"';
+  const closingQuote = toPdfSafeText('"Striving Together - Reaching Higher"');
   const closeW = timesBold.widthOfTextAtSize(closingQuote, 18);
   backPage.drawText(closingQuote, {
     x: (PAGE_WIDTH - closeW) / 2,
@@ -670,13 +754,14 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
     'Aspire for Excellence Foundation',
     'Email: info@aspireforexcellence.org',
     'Website: https://aspire-alumni-ebook.pages.dev',
-    'Lagos, Nigeria • Global Alumni Network',
+    'Lagos, Nigeria - Global Alumni Network',
   ];
 
   let cY = backPanelY - 120;
   for (const line of contactLines) {
-    const lw = helvetica.widthOfTextAtSize(line, 10);
-    backPage.drawText(line, {
+    const safeLine = toPdfSafeText(line);
+    const lw = helvetica.widthOfTextAtSize(safeLine, 10);
+    backPage.drawText(safeLine, {
       x: (PAGE_WIDTH - lw) / 2,
       y: cY,
       size: 10,
@@ -686,16 +771,10 @@ export async function generateAlumniEBook(options: EBookOptions): Promise<Uint8A
     cY -= 20;
   }
 
-  // Final gold stars
-  const endStars = '★   ★   ★';
-  const endW = helveticaBold.widthOfTextAtSize(endStars, 14);
-  backPage.drawText(endStars, {
-    x: (PAGE_WIDTH - endW) / 2,
-    y: 80,
-    size: 14,
-    font: helveticaBold,
-    color: GOLD,
-  });
+  // Final gold stars (drawn with vector SVG paths)
+  drawGoldStar(backPage, PAGE_WIDTH / 2 - 25, 80, 0.9);
+  drawGoldStar(backPage, PAGE_WIDTH / 2, 80, 1.3);
+  drawGoldStar(backPage, PAGE_WIDTH / 2 + 25, 80, 0.9);
 
   return await pdfDoc.save();
 }

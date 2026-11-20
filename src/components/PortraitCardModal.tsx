@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { X, FileText, Image as ImageIcon, Star, Check } from 'lucide-react';
 import { AlumniProfile } from './AlumniProfileModal';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { toPdfSafeText } from '../utils/ebookGenerator';
 
 interface PortraitCardModalProps {
   alumni: AlumniProfile;
@@ -218,7 +219,7 @@ export const PortraitCardModal: React.FC<PortraitCardModalProps> = ({
         height: 24,
         color: rgb(0.078, 0.553, 0.576),
       });
-      const badgeText = `COHORT ${alumni.cohort_year} FELLOW`;
+      const badgeText = toPdfSafeText(`COHORT ${alumni.cohort_year} FELLOW`);
       const bw = helveticaBold.widthOfTextAtSize(badgeText, 9);
       page.drawText(badgeText, {
         x: PAGE_W / 2 - bw / 2,
@@ -248,7 +249,7 @@ export const PortraitCardModal: React.FC<PortraitCardModalProps> = ({
       }
 
       // Alumnus Name
-      const name = `${alumni.first_name} ${alumni.surname}`;
+      const name = toPdfSafeText(`${alumni.first_name} ${alumni.surname}`);
       const nw = timesBold.widthOfTextAtSize(name, 24);
       page.drawText(name, {
         x: PAGE_W / 2 - nw / 2,
@@ -259,7 +260,7 @@ export const PortraitCardModal: React.FC<PortraitCardModalProps> = ({
       });
 
       // Industry
-      const ind = (alumni.industry || '').toUpperCase();
+      const ind = toPdfSafeText((alumni.industry || '').toUpperCase());
       const iw = helveticaBold.widthOfTextAtSize(ind, 11);
       page.drawText(ind, {
         x: PAGE_W / 2 - iw / 2,
@@ -270,7 +271,7 @@ export const PortraitCardModal: React.FC<PortraitCardModalProps> = ({
       });
 
       // Role & Location
-      const roleStr = alumni.role || 'Aspire Fellow';
+      const roleStr = toPdfSafeText(alumni.role || 'Aspire Fellow');
       const rw = helvetica.widthOfTextAtSize(roleStr, 11);
       page.drawText(roleStr, {
         x: PAGE_W / 2 - rw / 2,
@@ -282,7 +283,7 @@ export const PortraitCardModal: React.FC<PortraitCardModalProps> = ({
 
       // Advice quote
       if (alumni.advice) {
-        const quote = `"${alumni.advice.slice(0, 120)}..."`;
+        const quote = `"${toPdfSafeText(alumni.advice).slice(0, 120)}..."`;
         page.drawText(quote, {
           x: 60,
           y: PAGE_H - 420,
